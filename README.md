@@ -5,9 +5,9 @@
 Erste rudimentäre Version, erstellt mit PureBasic [PureBasic](https://www.purebasic.com/)\
 Für Windows
 
-HEXadezimaler.exe starten
-
 ## Anleitung
+
+HEXadezimaler.exe starten
 
 HEX-File laden mit "Öffnen..."
 
