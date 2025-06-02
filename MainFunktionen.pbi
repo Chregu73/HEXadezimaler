@@ -260,6 +260,8 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
   #InputRequesterSWID = 99
   If OpenWindow(#InputRequesterSWID, pos_x.u - 30 , pos_y.u + 10 , 360, 290,
                 "", #PB_Window_Tool | #PB_Window_SystemMenu | #PB_Window_SizeGadget | #PB_Window_TitleBar)
+    StickyWindow(#InputRequesterSWID, #True)
+    DisableWindow(Window_0, #True)
     AddKeyboardShortcut(#InputRequesterSWID, #PB_Shortcut_Return, 10)
     AddKeyboardShortcut(#InputRequesterSWID, #PB_Shortcut_Escape, 99)
     ;Gadget:       #   PosX PosY DimX DimY Wert
@@ -426,8 +428,9 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
     Until lQuit
     RemoveKeyboardShortcut(#InputRequesterSWID, #PB_Shortcut_All)
     CloseWindow(#InputRequesterSWID)
-   EndIf
-   ProcedureReturn lResult
+  EndIf
+  DisableWindow(Window_0, #False)
+  ProcedureReturn lResult
 EndProcedure
 
 Procedure Listview_Rechtsklick()
@@ -468,6 +471,74 @@ Procedure Listview_Rechtsklick()
   FreeMemory(*bereich)
 EndProcedure
 
+
+; Findet einen Zielstring im Quellstring, ignoriert dabei die Sequenz "\x" im Quellstring.
+; Gibt die Startposition des Zielstrings zurück (1-basiert), oder 0, wenn nicht gefunden.
+;
+; SourceString$: Der String, in dem gesucht werden soll.
+; SearchString$: Der String, der gesucht werden soll.
+; StartPosition: Die Position im SourceString, ab der gesucht werden soll (optional, Standard ist 1).
+;
+Procedure.i FindStringIgnoringBackslashX(SourceString.s, SearchString.s, StartPosition = 1)
+  Protected SourceLen = Len(SourceString)
+  Protected SearchLen = Len(SearchString)
+  Protected CurrentSourcePos = StartPosition
+  Protected TempSourceChar.s
+  Protected MatchFound = #False
+
+  ; Grundlegende Prüfungen
+  If SearchLen = 0 : ProcedureReturn StartPosition : EndIf ; Leerer Suchstring ist immer gefunden
+  If SourceLen = 0 : ProcedureReturn 0 : EndIf ; Leerer Quellstring kann nichts enthalten
+  If StartPosition < 1 : StartPosition = 1 : EndIf ; Startposition muss mindestens 1 sein
+  If StartPosition > SourceLen : ProcedureReturn 0 : EndIf ; Startposition außerhalb des Strings
+
+  ; Hauptsuchschleife
+  While CurrentSourcePos <= SourceLen
+    TempSourceChar = Mid(SourceString, CurrentSourcePos, 1)
+
+    ; Prüfen, ob wir bei "\x" sind
+    If TempSourceChar = "\" And CurrentSourcePos + 1 <= SourceLen And Mid(SourceString, CurrentSourcePos + 1, 1) = "x"
+      ; "\x" gefunden, überspringe diese beiden Zeichen
+      CurrentSourcePos + 2
+      Continue ; Springe zum nächsten Schleifendurchlauf
+    EndIf
+
+    ; Wenn nicht "\x", versuche eine Übereinstimmung
+    If CurrentSourcePos + SearchLen - 1 <= SourceLen
+      ; Erstelle einen temporären Substring aus SourceString (ohne "\x")
+      ; und vergleiche ihn mit SearchString
+      Protected EffectiveSourceChar.s
+      Protected SearchIndex = 1
+      Protected SourcePtr = CurrentSourcePos
+      Protected MatchPossible = #True
+
+      While SearchIndex <= SearchLen And SourcePtr <= SourceLen
+        TempSourceChar = Mid(SourceString, SourcePtr, 1)
+        If TempSourceChar = "\" And SourcePtr + 1 <= SourceLen And Mid(SourceString, SourcePtr + 1, 1) = "x"
+          SourcePtr + 2 ; Überspringe "\x"
+          Continue
+        EndIf
+
+        If Mid(SourceString, SourcePtr, 1) <> Mid(SearchString, SearchIndex, 1)
+          MatchPossible = #False
+          Break
+        EndIf
+
+        SourcePtr + 1
+        SearchIndex + 1
+      Wend
+
+      If MatchPossible And SearchIndex > SearchLen
+        ProcedureReturn CurrentSourcePos ; Übereinstimmung gefunden
+      EndIf
+    EndIf
+
+    CurrentSourcePos + 1
+  Wend
+
+  ProcedureReturn 0 ; Nichts gefunden
+EndProcedure
+
 Procedure WeiterSuchen(EventType)
   Protected zelle.s
   If textsuchen.s
@@ -475,7 +546,7 @@ Procedure WeiterSuchen(EventType)
       zelle.s = ZelleAuslesen(4, zeilensuchen.l)
       zelle.s = ConvertHexToEscapedAscii(zelle.s)
       zeilensuchen.l + 1
-    Until FindString(zelle.s, textsuchen.s) Or (zeilensuchen.l > AnzahlZeilen())
+    Until FindStringIgnoringBackslashX(zelle.s, textsuchen.s) Or (zeilensuchen.l > AnzahlZeilen())
     If zeilensuchen.l > AnzahlZeilen()
       MessageRequester("Warnung", "String nicht gefunden!")
     Else
@@ -495,8 +566,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 6.20 (Windows - x86)
-; CursorPosition = 491
-; FirstLine = 445
+; CursorPosition = 431
+; FirstLine = 394
 ; Folding = ---
 ; EnableXP
 ; DPIAware

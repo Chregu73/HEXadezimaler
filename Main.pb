@@ -1,5 +1,7 @@
 ﻿Global zeilennummer.l, zeilensuchen.l, textsuchen.s, datei.s
 
+#WM_RBUTTONDOWN = 516
+
 XIncludeFile "MainWindow.pbf" ;Einbinden der ersten Fenster-Definition
 XIncludeFile "Listview.pbi"
 XIncludeFile "MainFunktionen.pbi"
@@ -29,7 +31,7 @@ Repeat
     Case Window_0
       Window_0_Events(Event) ;Dieser Prozedurname ist immer der Fenstername gefolgt von '_Events'
 
-    If Event = 516		;WM_RBUTTONDOWN
+    If Event = #WM_RBUTTONDOWN
       Listview_Rechtsklick()  ;im ListView
     EndIf
 
@@ -39,6 +41,7 @@ Until Event = #PB_Event_CloseWindow ;Beenden, wenn eines der Fenster geschlossen
 Vernichte_Listview()
 
 ; IDE Options = PureBasic 6.20 (Windows - x86)
+; CursorPosition = 33
 ; Folding = -
 ; EnableXP
 ; DPIAware
