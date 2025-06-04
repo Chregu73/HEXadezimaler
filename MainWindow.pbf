@@ -23,6 +23,7 @@ Enumeration FormMenu
 EndEnumeration
 
 Declare SaveAsFile(Event)
+Declare Beenden(Event)
 Declare test2(Event)
 Declare LoadFile(Event)
 Declare WeiterSuchen(Event)
@@ -30,17 +31,22 @@ Declare Suchen(Event)
 
 Procedure OpenWindow_0(x = 0, y = 0, width = 680, height = 510)
   Window_0 = OpenWindow(#PB_Any, x, y, width, height, "HEXadezimaler", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_ScreenCentered)
+  AddKeyboardShortcut(Window_0, #PB_Shortcut_Control | #PB_Shortcut_N, #MenuItem_2)
+  AddKeyboardShortcut(Window_0, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_3)
+  AddKeyboardShortcut(Window_0, #PB_Shortcut_Control | #PB_Shortcut_S, #MenuItem_4)
+  AddKeyboardShortcut(Window_0, #PB_Shortcut_Control | #PB_Shortcut_Alt, #MenuItem_5)
+  AddKeyboardShortcut(Window_0, #PB_Shortcut_Control | #PB_Shortcut_E, #MenuItem_6)
   AddKeyboardShortcut(Window_0, #PB_Shortcut_Alt | #PB_Shortcut_F4, #MenuItem_8)
   AddKeyboardShortcut(Window_0, #PB_Shortcut_Control | #PB_Shortcut_F, #MenuItem_10)
   AddKeyboardShortcut(Window_0, #PB_Shortcut_F3, #MenuItem_11)
 
   CreateMenu(0, WindowID(Window_0))
   MenuTitle("Datei")
-  MenuItem(#MenuItem_2, "Neu")
-  MenuItem(#MenuItem_3, "Öffnen...")
-  MenuItem(#MenuItem_4, "Speichern")
-  MenuItem(#MenuItem_5, "Speichern unter...")
-  MenuItem(#MenuItem_6, "Exportieren...")
+  MenuItem(#MenuItem_2, "Neu" + Chr(9) + "Strg+N")
+  MenuItem(#MenuItem_3, "Öffnen..." + Chr(9) + "Strg+O")
+  MenuItem(#MenuItem_4, "Speichern" + Chr(9) + "Strg+S")
+  MenuItem(#MenuItem_5, "Speichern unter..." + Chr(9) + "Strg+Alt+S")
+  MenuItem(#MenuItem_6, "Exportieren..." + Chr(9) + "Strg+E")
   MenuBar()
   MenuItem(#MenuItem_8, "Beenden" + Chr(9) + "Alt+F4")
   MenuTitle("Bearbeiten")
@@ -65,6 +71,7 @@ Procedure Window_0_Events(event)
           SaveAsFile(EventMenu())
         Case #MenuItem_6
         Case #MenuItem_8
+          Beenden(EventMenu())
         Case #MenuItem_10
           Suchen(EventMenu())
         Case #MenuItem_11

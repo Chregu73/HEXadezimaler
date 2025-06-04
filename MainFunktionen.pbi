@@ -12,8 +12,16 @@
 #IntelHex_RECLEN                  = $ccff66
 #IntelHex_LOAD_OFFSET             = $ffcccc
 #IntelHex_RECTYP                  = $ff9999
-#IntelHex_INFO                    = $ffffcc
+#IntelHex_DATA                    = $ffffcc
 #IntelHex_CHKSUM                  = $9999ff
+
+;Tabellenspalten
+#Spalte_RECORD_MARK               = 0
+#Spalte_RECLEN                    = 1
+#Spalte_LOAD_OFFSET               = 2
+#Spalte_RECTYP                    = 3
+#Spalte_DATA                      = 4
+#Spalte_CHKSUM                    = 5
 
 Procedure test2(EventType)
   If CreateImage(0, 640, 1)
@@ -256,6 +264,24 @@ Procedure Pruefsumme_Berechnen(spalte.l, zeile.l)
   FreeMemory(*Ascii)
 EndProcedure
 
+Procedure PruefeTypGeaendert(zeile.l, Typ.s)
+  ;Prüfen ob bei geandertem Datentyp:
+  ;wenn Typ=0,2...5 => Datensatzlänge = Datenfeld
+  ;wenn Typ=1       => Datensatzlänge=0 und Adresse="0000"
+  If typ.s = "01"
+    If (ZelleAuslesen(#Spalte_RECLEN, zeile.l) <> "00") Or
+       (ZelleAuslesen(#Spalte_DATA, zeile.l) <> "")
+      If MessageRequester("Achtung",
+                          "Datensatzlänge ist nicht Null, automatisch anpassen?",
+                          #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        ZelleSchreiben(#Spalte_RECLEN, zeile.l, "00")
+        ZelleSchreiben(#Spalte_DATA, zeile.l, "")
+      EndIf 
+    EndIf
+  EndIf
+  ;Requster "Automatisch ändern?"
+EndProcedure  
+
 Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
   #InputRequesterSWID = 99
   If OpenWindow(#InputRequesterSWID, pos_x.u - 30 , pos_y.u + 10 , 360, 290,
@@ -373,11 +399,15 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
       Select WaitWindowEvent()
         Case #PB_Event_CloseWindow
           lQuit = #True
-        ;Case #PB_Event_RightClick
+        ;Rechte Maustaste gedrückt:
         Case #WM_RBUTTONDOWN
-          DisplayPopupMenu(99, WindowID(#InputRequesterSWID))  
+          ;Popup-Menu nur anzeigen, wenn Spalte 4 (Datenfeld)
+          If spalte.l = 4
+            DisplayPopupMenu(99, WindowID(#InputRequesterSWID))
+          EndIf
         Case #PB_Event_Menu
           Select EventMenu()
+            ;1+2 nur bei Spalte 4:
             Case 1 ;Hexadezimal
               If Not GetMenuItemState(99, 1)
                 SetGadgetText(976, ConvertEscapedAsciiToRawHex(GetGadgetText(976)))
@@ -402,15 +432,15 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
         Case #PB_Event_Gadget
           Select EventGadget()
             Case 980 To 987 ;Checkbox geändert
-              zahl.a = 0
               For x.a = 0 To 5
-                ;If GetGadgetState(980 + x.a) = #PB_Checkbox_Checked
-;                  zahl.a = SetBit(zahl.a, x.a)
-                ;EndIf
+                If GetGadgetState(980 + x.a) = #PB_Checkbox_Checked
+                  lResult = "0" + Str(x.a)
+                EndIf
               Next x.a
-              wert.s = Str(zahl.a)
             Case 991 ;OK gedrückt
               Select spalte.l
+                Case 3
+                  PruefeTypGeaendert(zeile.l, lResult.s)
                 Case 4
                   If Not GetMenuItemState(99, 1)
                     SetGadgetText(976, ConvertEscapedAsciiToRawHex(GetGadgetText(976)))
@@ -422,14 +452,21 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
                 EndSelect
               lQuit = #True
             Case 998 ;Cancel gedrückt
+              lResult = "" ;nichts ändern
               lQuit = #True
           EndSelect
       EndSelect
     Until lQuit
+    ;Popup-Menu wieder freigeben:
+    If IsMenu(99)
+      FreeMenu(99)
+    EndIf
     RemoveKeyboardShortcut(#InputRequesterSWID, #PB_Shortcut_All)
     CloseWindow(#InputRequesterSWID)
   EndIf
-  DisableWindow(Window_0, #False)
+  DisableWindow(Window_0, #False) ;Enabled das Hauptfenster wieder
+  SetActiveWindow(Window_0) ;und setzt den Fokus drauf
+  BringWindowToTop_(Window_0) ;kommt aber erst hier wieder in den Vordergrund
   ProcedureReturn lResult
 EndProcedure
 
@@ -445,20 +482,6 @@ Procedure Listview_Rechtsklick()
       zeile.l = PeekL(*bereich+8)
       ;64 = String (kein Zeiger!) mit dem Itemtext (maximal 256 Bytes, abschliessend mit Nullbyte)
       item_text.s = PeekS(*bereich+64, -1, #PB_Ascii)
-      ;uns interessiert Spalte #3: CV-Wert und 1. Zeile ist #0
-      ;SetItemText(H,T,S,L)    Setzt einen neuen Text als Itemtext ein.
-      ;GetItemText(H,T,S,L)    Liest einen Itemtext aus.
-      ;H : Long - Handle eines mit CreateListview() erstellten Listview Controls 
-      ;T : Zeiger auf einen String mit dem neuen Text (max. 255 Zeichen) /
-      ;    Bereich, in den der ausgelesene Text geschrieben wird
-      ;S : Long - Index der Spalte von H, in die der neue Text gesetzt werden soll /
-      ;    die ausgelesen werden soll (nullbasierend). 
-      ;L : Long - Index der Zeile von H, in die der neue Text gesetzt werden soll /
-      ;    die ausgelesen werden soll (nullbasierend). 
-      ;Ergebnis: Long - Ungleich 0, bei Fehler 0.
-      ;holt aus Spalte 1 die CV-Nummer:
-      ;CallFunction(ListViewLibraryHandle.l, "GetItemText", ListViewHandle.l, *bereich, 1, zeile.l)
-      ;cv_nummer.u = Val(PeekS(*bereich, -1, #PB_Ascii))
       ;nur wenn etwas geändert neu schreiben:
       item_text.s = InputRequesterS(spalte.l, zeile.l, item_text.s, DesktopMouseX(), DesktopMouseY())
       If Not item_text.s = ""
@@ -564,10 +587,13 @@ Procedure Suchen(EventType)
   EndIf
 EndProcedure
 
+Procedure Beenden(EventType)
+  Event = #PB_Event_CloseWindow
+EndProcedure
 
 ; IDE Options = PureBasic 6.20 (Windows - x86)
-; CursorPosition = 431
-; FirstLine = 394
+; CursorPosition = 281
+; FirstLine = 257
 ; Folding = ---
 ; EnableXP
 ; DPIAware

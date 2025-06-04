@@ -110,6 +110,12 @@ Procedure.s Zeile_Auslesen(zeile.l)
   ProcedureReturn text.s
 EndProcedure
 
+Procedure ZelleSchreiben(spalte.l, zeile.l, NeuerText.s)
+  *bereich = Ascii(NeuerText.s)
+  CallFunction(ListViewLibraryHandle.l, "SetItemText", ListViewHandle.l, *bereich, spalte.l, zeile.l)
+  FreeMemory(*bereich)  
+EndProcedure
+
 Procedure.s ZelleAuslesen(spalte.l, zeile.l)
   *bereich = AllocateMemory(320)
   CallFunction(ListViewLibraryHandle.l, "GetItemText", ListViewHandle.l, *bereich, spalte.l, zeile.l)
@@ -127,8 +133,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 6.20 (Windows - x86)
-; CursorPosition = 123
-; FirstLine = 78
+; CursorPosition = 113
+; FirstLine = 82
 ; Folding = --
 ; EnableXP
 ; DPIAware
