@@ -26,7 +26,6 @@
 Procedure test2(EventType)
   If CreateImage(0, 640, 1)
     StartDrawing(ImageOutput(0))
-    
     Line(0, 0, 640, 1, $ffffff) ;Hintergrund
     Line(0, 0, 72, 1, $ccffff)
     Line(72, 0, 32, 1, $ccff66)
@@ -34,8 +33,8 @@ Procedure test2(EventType)
     Line(72+32+64, 0, 40, 1, $ff9999)
     Line(72+32+64+40, 0, 376, 1, $ffffcc)
     Line(72+32+64+40+376, 0, 32, 1, $9999ff)
-
-    StopDrawing() ; This is absolutely needed when the drawing operations are finished !!! Never forget it !
+    StopDrawing() ;This is absolutely needed when the drawing operations are finished!
+    ;Never forget it !
     If SaveImage(0, "background.bmp", #PB_ImagePlugin_BMP)
       MessageRequester("File created", "background.bmp")
     EndIf
@@ -273,14 +272,52 @@ Procedure PruefeTypGeaendert(zeile.l, Typ.s)
        (ZelleAuslesen(#Spalte_DATA, zeile.l) <> "")
       If MessageRequester("Achtung",
                           "Datensatzlänge ist nicht Null, automatisch anpassen?",
-                          #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+                          #PB_MessageRequester_YesNo |
+                          #PB_MessageRequester_Warning) = #PB_MessageRequester_Yes
         ZelleSchreiben(#Spalte_RECLEN, zeile.l, "00")
         ZelleSchreiben(#Spalte_DATA, zeile.l, "")
       EndIf 
     EndIf
+  Else ;Typ=0,2...5
+    If (ZelleAuslesen(#Spalte_RECLEN, zeile.l) = "00") Or
+       (ZelleAuslesen(#Spalte_DATA, zeile.l) = "")
+      MessageRequester("Achtung",
+                       "Datensatzlänge ist Null!" + Chr(13) + Chr(10) +
+                       "Bitte RECLEN und DATA auf richtige Länge überprüfen!",
+                       #PB_MessageRequester_Ok | #PB_MessageRequester_Warning)
+    EndIf
   EndIf
-  ;Requster "Automatisch ändern?"
 EndProcedure  
+
+Procedure.s DatenfeldPruefen(zeile.l, TestString.s)
+  TestString.s = UCase(TestString.s)
+  DatenLaenge.l = Val("$"+ZelleAuslesen(#Spalte_RECLEN, zeile.l))*2 ;1Byte=2Zeichen
+  If Len(TestString.s) <> (DatenLaenge.l)
+    MessageRequester("Achtung",
+                     "Datensatzlänge entspricht nicht der erwarteten Länge!" + Chr(13) + Chr(10) +
+                     "Bitte DATA auf richtige Länge überprüfen!" + Chr(13) + Chr(10) +
+                     "Erwartete Länge: " + Str(DatenLaenge.l) + Chr(13) + Chr(10) +
+                     "Effektive Länge: " + Str(Len(TestString.s)),
+                     #PB_MessageRequester_Ok | #PB_MessageRequester_Warning)
+    ;TestString.s = "" ;Leerer String zurück zum nichts ändern
+  EndIf
+  Fehler.l = 0
+  For i = 0 To Len(TestString.s)-1
+    HexNibble.s = Mid(TestString.s, i+1, 1)
+    If Not IsHexDigit(Mid(HexNibble.s, 1, 1))
+      Fehler.l+1
+    EndIf
+  Next
+  If Fehler.l
+    MessageRequester("Achtung",
+                     "Datensatz enthält " + Str(Fehler.l) + " ungültige(s) Zeichen!" + Chr(13) + Chr(10) +
+                     "Gültige Zeichen sind: 0...9 und A...F" + Chr(13) + Chr(10) +
+                     "Kleinbuchstaben werden automatisch in Grossbuchstaben umgewandelt!",
+                     #PB_MessageRequester_Ok | #PB_MessageRequester_Warning)
+    ;TestString.s = "" ;Leerer String zurück zum nichts ändern
+  EndIf
+  ProcedureReturn TestString.s
+EndProcedure
 
 Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
   #InputRequesterSWID = 99
@@ -309,7 +346,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
     ButtonGadget(  998, 290, 258,  60,  23, "Cancel")
     
     Select spalte.l
-      Case 0 ;Zeilennummer und Startcode
+      Case #Spalte_RECORD_MARK ;Zeilennummer und Startcode
         SetWindowTitle(#InputRequesterSWID, "Zeilennummer & Satzbeginn")
         For x.a = 0 To 5
           ;CheckBoxen verstecken:
@@ -319,7 +356,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
                            ~") und Startcode (:)\r\n" +
                            ~"Intel-Bezeichnung: RECORD MARK\r\n" +
                            "Nicht bearbeitbar!")
-      Case 1 ;Datenlänge, Länge der Nutzdaten als zwei Hexadezimalziffern
+      Case #Spalte_RECLEN ;Datenlänge, Länge der Nutzdaten als zwei Hexadezimalziffern
         SetWindowTitle(#InputRequesterSWID, "Datenlänge")
         For x.a = 0 To 5
           ;CheckBoxen verstecken:
@@ -329,9 +366,9 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
                            ~"Byte count\r\n" + 
                            ~"Länge der Nutzdaten als zwei Hexadezimalziffern\r\n" +
                            "Datenlänge: 0x" + wert.s + ~" HEX\r\n" +
-                           "Dezimal: " + Val("$" + wert.s) + ~" Bytes\r\n" +
-                           "Nicht bearbeitbar!")
-      Case 2 ;Adresse
+                           "Dezimal: " + Val("$" + wert.s) + " Bytes")
+        SetGadgetText(976, wert.s)
+      Case #Spalte_LOAD_OFFSET ;Adresse
         SetWindowTitle(#InputRequesterSWID, "Ladeadresse")
         For x.a = 0 To 5
           ;CheckBoxen verstecken:
@@ -339,9 +376,9 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
         Next x.a
         SetGadgetText(989, ~"Intel-Bezeichnung: LOAD OFFSET\r\n" +
                            ~"16-Bit-Adresse (Big-Endian)\r\n"+
-                           "0x" + wert.s + ~" HEX\r\n" +
-                           "Nicht bearbeitbar!")
-      Case 3 ;Datensatztyp
+                           "0x" + wert.s + " HEX")
+        SetGadgetText(976, wert.s)
+      Case #Spalte_RECTYP ;Datensatztyp
         SetWindowTitle(#InputRequesterSWID, "Datensatztyp")
         ;wird vom Gadget verdeckt:
         ;SetWindowColor(#InputRequesterSWID, $ffffcc) 
@@ -364,7 +401,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
                            "Adresse für nachfolgende Nutzdaten")
         SetGadgetText(975, ~"Start Linear Address Record\r\n" +
                            "Lineare Startadresse (EIP-Register)")
-      Case 4 ;Datenfeld
+      Case #Spalte_DATA ;Datenfeld
         SetWindowTitle(#InputRequesterSWID, "Daten")
         If CreatePopupMenu(99)
           MenuItem(1, "Hexadezimal")
@@ -379,7 +416,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
         SetGadgetText(989, ~"Intel-Bezeichnung: INFO or DATA\r\n" +
                            "Nutzdaten (RECLEN x 2 Zeichen)")
         SetGadgetText(976, wert.s)
-      Case 5 ;Prüfsumme
+      Case #Spalte_CHKSUM ;Prüfsumme
         SetWindowTitle(#InputRequesterSWID, "Prüfsumme")
         For x.a = 0 To 5
           ;CheckBoxen verstecken:
@@ -405,6 +442,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
           If spalte.l = 4
             DisplayPopupMenu(99, WindowID(#InputRequesterSWID))
           EndIf
+        ;Popup-Menu, Return oder Escape gedrückt im Requester:
         Case #PB_Event_Menu
           Select EventMenu()
             ;1+2 nur bei Spalte 4:
@@ -420,39 +458,46 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
                 SetMenuItemState(99, 1, 0)
                 SetMenuItemState(99, 2, 1)
               EndIf
-            Case 10 ;Return gedrückt
+            Case 10 ;Return gedrückt, ohne Plausibilitätsprüfung
               If Not GetMenuItemState(99, 1)
                 SetGadgetText(976, ConvertEscapedAsciiToRawHex(GetGadgetText(976)))
               EndIf
-              lResult = GetGadgetText(976)
+              lResult.s = GetGadgetText(976)
               lQuit = #True
             Case 99 ;Escape gedrückt
               lQuit = #True
           EndSelect
+        ;Checkbox geändert, OK oder Cancel gedrückt:
         Case #PB_Event_Gadget
           Select EventGadget()
             Case 980 To 987 ;Checkbox geändert
               For x.a = 0 To 5
                 If GetGadgetState(980 + x.a) = #PB_Checkbox_Checked
-                  lResult = "0" + Str(x.a)
+                  lResult.s = "0" + Str(x.a)
                 EndIf
               Next x.a
             Case 991 ;OK gedrückt
               Select spalte.l
-                Case 3
+                Case #Spalte_RECLEN
+                  lResult.s = GetGadgetText(976)
+                Case #Spalte_LOAD_OFFSET
+                  lResult.s = GetGadgetText(976)
+                Case #Spalte_RECTYP
                   PruefeTypGeaendert(zeile.l, lResult.s)
-                Case 4
+                Case #Spalte_DATA
                   If Not GetMenuItemState(99, 1)
                     SetGadgetText(976, ConvertEscapedAsciiToRawHex(GetGadgetText(976)))
                   EndIf
-                  lResult = GetGadgetText(976)
-                Case 5
+                  ;Plausibilitätsprüfung:
+                  lResult.s = GetGadgetText(976)
+                  lResult.s = DatenfeldPruefen(zeile.l, lResult.s)
+                Case #Spalte_CHKSUM
                   Pruefsumme_Berechnen(spalte.l, zeile.l)
                   text.s = ""
                 EndSelect
               lQuit = #True
             Case 998 ;Cancel gedrückt
-              lResult = "" ;nichts ändern
+              lResult.s = "" ;nichts ändern
               lQuit = #True
           EndSelect
       EndSelect
@@ -467,7 +512,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
   DisableWindow(Window_0, #False) ;Enabled das Hauptfenster wieder
   SetActiveWindow(Window_0) ;und setzt den Fokus drauf
   BringWindowToTop_(Window_0) ;kommt aber erst hier wieder in den Vordergrund
-  ProcedureReturn lResult
+  ProcedureReturn lResult.s
 EndProcedure
 
 Procedure Listview_Rechtsklick()
@@ -592,8 +637,8 @@ Procedure Beenden(EventType)
 EndProcedure
 
 ; IDE Options = PureBasic 6.20 (Windows - x86)
-; CursorPosition = 281
-; FirstLine = 257
-; Folding = ---
+; CursorPosition = 483
+; FirstLine = 456
+; Folding = ----
 ; EnableXP
 ; DPIAware
