@@ -18,11 +18,15 @@ HEX-File laden mit "Öffnen..."
 5. Spalte: Datenfeld
 6. Spalte (PS): Prüfsumme
 
-Mit Rechtsklick auf eine Zelle können die entsprechenden Daten angezeigt/bearbeitet werden. Momentan wird die Bearbeitung nur im Datenfeld (manuell) und der Prüfsumme (automatisch) unterstützt.
+Mit Rechtsklick auf eine Zelle können die entsprechenden Daten angezeigt/bearbeitet werden. Momentan wird die Bearbeitung der Datenlänge, der Adresse, des Datensatztyps, des Datenfelds (manuell) und der Prüfsumme (automatisch) unterstützt.
+
+### Datensatztyp
+
+Bei Rechtsklick erscheint ein Fenster zum Bearbeiten. Der Typ kann den Checkboxen bearbeitet und mit "OK" übernommen werden. Es findet eine automatische Anpassung der Felder "Datenlänge" und "Datenfeld" statt! "Cancel" verlässt das Fenster ohne die Daten zu ändern.
 
 ### Datenfeld
 
-Bei Rechtsklick erscheint ein Fenster zum Bearbeiten. Der HEX-Code kann im Eingabefeld bearbeitet und mit "OK" übernommen werden. "Cancel" verlässt das Fenster ohne die Daten zu ändern. Achtung: Eine Validierung findet nicht statt!
+Bei Rechtsklick erscheint ein Fenster zum Bearbeiten. Der HEX-Code kann im Eingabefeld bearbeitet und mit "OK" übernommen werden. "Cancel" verlässt das Fenster ohne die Daten zu ändern. Die Eingabe wird validiert!
 Mit Rechtsklick ins Eingabefeld kann die Ansicht zwischen "Hexadezimal" und "Ansii" umgeschaltet werden. Die Ansii-Ansicht ist für nicht-druckbare Zeichen im "Escaped Ascii"-Format: \x[zweistellige Hexadezimalzahl], während druckbare Zeichen normal als Text dargestellt werden.
 
 ### Prüfsumme
