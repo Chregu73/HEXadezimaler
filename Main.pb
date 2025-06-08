@@ -2,33 +2,46 @@
 
 #WM_RBUTTONDOWN = 516
 
-XIncludeFile "MainWindow.pbf" ;Einbinden der ersten Fenster-Definition
-XIncludeFile "Listview.pbi"
+XIncludeFile "MainWindow.pbi"
 XIncludeFile "MainFunktionen.pbi"
 
-OpenWindow_0() ;Öffnet das erste Fenster. Dieser Prozedurname ist immer 'Open' gefolgt vom Fensternamen.
-Zeichne_Listview()
+OpenPreferences("HEXadezimaler.ini")
+;Öffnet Fenster aus MainWindows.pbi
+OpenWindow_0(ReadPreferenceInteger("Fensterposition X", 100),
+             ReadPreferenceInteger("Fensterposition Y", 100),
+             ReadPreferenceInteger("Fenstergroesse X", 400),
+             ReadPreferenceInteger("Fenstergroesse Y", 200))
+Zeichne_Listview(WindowWidth(Window_0)-10,
+                 WindowHeight(Window_0)-30,
+                 ReadPreferenceInteger("Spalte 0", 72),
+                 ReadPreferenceInteger("Spalte 1", 32),
+                 ReadPreferenceInteger("Spalte 2", 64),
+                 ReadPreferenceInteger("Spalte 3", 40),
+                 ReadPreferenceInteger("Spalte 4", 376),
+                 ReadPreferenceInteger("Spalte 5", 32))
+ClosePreferences()
 
 
-;Die übliche Haupt-Ereignisschleife, die einzige Änderung ist der automatische Aufruf der
-;für jedes Fenster generierten Ereignis-Prozedur.
 Repeat
   Event = WaitWindowEvent()
-
   Select EventWindow()
     Case Window_0
       Window_0_Events(Event)
-
-    If Event = #WM_RBUTTONDOWN
-      Listview_Rechtsklick() ;im ListView
-    EndIf
-
+      ;If Event = #WM_RBUTTONDOWN
+      If EventGadget() = #ListView And EventType() = #PB_EventType_RightClick
+        Listview_Rechtsklick(#PB_EventType_RightClick) ;im ListView
+      EndIf
+      If EventGadget() = #ListView And EventType() = #PB_EventType_LeftDoubleClick
+        Listview_Rechtsklick(#PB_EventType_LeftDoubleClick) ;im ListView
+      EndIf
   EndSelect
-  
 Until Event = #PB_Event_CloseWindow ;Beenden, wenn eines der Fenster geschlossen wird.
-Vernichte_Listview()
+Speichere_Preferences()
+End
 
 ; IDE Options = PureBasic 6.20 (Windows - x86)
-; CursorPosition = 11
+; CursorPosition = 34
 ; EnableXP
 ; DPIAware
+; UseIcon = Hex2.ico
+; Executable = HEXadezimaler (x86).exe

@@ -23,22 +23,81 @@
 #Spalte_DATA                      = 4
 #Spalte_CHKSUM                    = 5
 
-Procedure test2(EventType)
-  If CreateImage(0, 640, 1)
-    StartDrawing(ImageOutput(0))
-    Line(0, 0, 640, 1, $ffffff) ;Hintergrund
-    Line(0, 0, 72, 1, $ccffff)
-    Line(72, 0, 32, 1, $ccff66)
-    Line(72+32, 0, 64, 1, $ffcccc)
-    Line(72+32+64, 0, 40, 1, $ff9999)
-    Line(72+32+64+40, 0, 376, 1, $ffffcc)
-    Line(72+32+64+40+376, 0, 32, 1, $9999ff)
-    StopDrawing() ;This is absolutely needed when the drawing operations are finished!
-    ;Never forget it !
-    If SaveImage(0, "background.bmp", #PB_ImagePlugin_BMP)
-      MessageRequester("File created", "background.bmp")
-    EndIf
+Procedure SpaltenFaerben()
+  For i.l = 0 To CountGadgetItems(#ListView)
+    SetGadgetItemColor(#ListView, i.l, #PB_Gadget_BackColor,
+                       #IntelHex_RECORD_MARK, #Spalte_RECORD_MARK)
+    SetGadgetItemColor(#ListView, i.l, #PB_Gadget_BackColor,
+                       #IntelHex_RECLEN, #Spalte_RECLEN)
+    SetGadgetItemColor(#ListView, i.l, #PB_Gadget_BackColor,
+                       #IntelHex_LOAD_OFFSET, #Spalte_LOAD_OFFSET)
+    SetGadgetItemColor(#ListView, i.l, #PB_Gadget_BackColor,
+                       #IntelHex_RECTYP, #Spalte_RECTYP)
+    SetGadgetItemColor(#ListView, i.l, #PB_Gadget_BackColor,
+                       #IntelHex_DATA, #Spalte_DATA)
+    SetGadgetItemColor(#ListView, i.l, #PB_Gadget_BackColor,
+                       #IntelHex_CHKSUM, #Spalte_CHKSUM)
+  Next i.l
+EndProcedure
+
+Procedure Zeichne_Listview(breite, hoehe, s0, s1, s2, s3, s4, s5)
+  ListIconGadget(#ListView, 5, 5, breite, hoehe, "ZN/SC", s0,
+                 #PB_ListIcon_GridLines |
+                 #PB_ListIcon_FullRowSelect)
+  AddGadgetColumn(#ListView, #Spalte_RECLEN, "BC", s1)
+  AddGadgetColumn(#ListView, #Spalte_LOAD_OFFSET, "Adresse", s2)
+  AddGadgetColumn(#ListView, #Spalte_RECTYP, "Typ", s3)
+  AddGadgetColumn(#ListView, #Spalte_DATA, "Datenfeld", s4)
+  AddGadgetColumn(#ListView, #Spalte_CHKSUM, "PS", s5)
+  SetGadgetItemAttribute(#ListView, 0, #PB_ListIcon_ColumnAlignment,
+                         #PB_ListIcon_Right, #Spalte_RECORD_MARK)
+  SetGadgetItemAttribute(#ListView, 0, #PB_ListIcon_ColumnAlignment,
+                         #PB_ListIcon_Center, #Spalte_RECLEN)
+  SetGadgetItemAttribute(#ListView, 0, #PB_ListIcon_ColumnAlignment,
+                         #PB_ListIcon_Right, #Spalte_LOAD_OFFSET)
+  SetGadgetItemAttribute(#ListView, 0, #PB_ListIcon_ColumnAlignment,
+                         #PB_ListIcon_Center, #Spalte_RECTYP)
+  SetGadgetItemAttribute(#ListView, 0, #PB_ListIcon_ColumnAlignment,
+                         #PB_ListIcon_Left, #Spalte_DATA)
+  SetGadgetItemAttribute(#ListView, 0, #PB_ListIcon_ColumnAlignment,
+                         #PB_ListIcon_Center, #Spalte_CHKSUM)
+  ListViewFont = LoadFont(#PB_Any, "Courier New", 8)
+  If ListViewFont
+    SetGadgetFont(#ListView, FontID(ListViewFont))
   EndIf
+EndProcedure
+
+Procedure Speichere_Preferences()
+  OpenPreferences("HEXadezimaler.ini")
+  WritePreferenceInteger("Fensterposition X", WindowX(Window_0))
+  WritePreferenceInteger("Fensterposition Y", WindowY(Window_0))
+  WritePreferenceInteger("Fenstergroesse X", WindowWidth(Window_0,
+                                                         #PB_Window_InnerCoordinate))
+  WritePreferenceInteger("Fenstergroesse Y", WindowHeight(Window_0,
+                                                          #PB_Window_InnerCoordinate))
+  WritePreferenceInteger("Spalte 0", GetGadgetItemAttribute(#ListView, 0,
+                                                            #PB_ListIcon_ColumnWidth,
+                                                            #Spalte_RECORD_MARK))
+  WritePreferenceInteger("Spalte 1", GetGadgetItemAttribute(#ListView, 0,
+                                                            #PB_ListIcon_ColumnWidth,
+                                                            #Spalte_RECLEN))
+  WritePreferenceInteger("Spalte 2", GetGadgetItemAttribute(#ListView, 0,
+                                                            #PB_ListIcon_ColumnWidth,
+                                                            #Spalte_LOAD_OFFSET))
+  WritePreferenceInteger("Spalte 3", GetGadgetItemAttribute(#ListView, 0,
+                                                            #PB_ListIcon_ColumnWidth,
+                                                            #Spalte_RECTYP))
+  WritePreferenceInteger("Spalte 4", GetGadgetItemAttribute(#ListView, 0,
+                                                            #PB_ListIcon_ColumnWidth,
+                                                            #Spalte_DATA))
+  WritePreferenceInteger("Spalte 5", GetGadgetItemAttribute(#ListView, 0,
+                                                            #PB_ListIcon_ColumnWidth,
+                                                            #Spalte_CHKSUM))
+  ClosePreferences()
+EndProcedure
+
+Procedure Listview_Anpassen(breite, hoehe)
+  ResizeGadget(#ListView, 5, 5, breite, hoehe)
 EndProcedure
 
 Procedure LoadFile(EventType)
@@ -47,7 +106,7 @@ Procedure LoadFile(EventType)
   ;datei.s = "Beispiel.hex"
   If datei.s
     zeilennummer.l = 0
-    Loesche_Listview()
+    ClearGadgetItems(#ListView)
     If ReadFile(0, datei.s)
       While Eof(0) = 0
         zeile.s = ReadString(0, #PB_Ascii)
@@ -58,31 +117,111 @@ Procedure LoadFile(EventType)
         df.s = Mid(zeile.s, 10) ;bis zum Zeilenende lesen
         ps.s = Right(df.s, 2);hintersten 2 Zeichen
         df.s = Mid(df.s, 1, StringByteLength(df.s, #PB_Ascii)-2)
-        Neue_Zeile(sc.s, bc.s, ad.s, tp.s, df.s, ps.s)
+        zeilennummer.l + 1
+        AddGadgetItem(#ListView, -1, Str(zeilennummer.l) + " " + sc.s+Chr(10)+
+                                     bc.s+Chr(10)+
+                                     ad.s+Chr(10)+
+                                     tp.s+Chr(10)+
+                                     df.s+Chr(10)+
+                                     ps.s)
+        SpaltenFaerben()
       Wend
       CloseFile(0)
     EndIf
   EndIf
 EndProcedure
 
-Procedure SaveAsFile(EventType)
-  datei.s = SaveFileRequester("Bitte Datei zum Speichern auswählen", "", "", 0)
+Procedure SafeFile(EventType)
   If datei.s
     zeilennummer.l = 0
     If CreateFile(0, datei.s)
-      While 1
-        text.s = Zeile_Auslesen(zeilennummer.l)
+      For i.l = 0 To CountGadgetItems(#ListView)
+        text.s = ":" +
+           GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_RECLEN) +
+           GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_LOAD_OFFSET) +
+           GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_RECTYP) +
+           GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_DATA) +
+           GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_CHKSUM)
         If text.s = ""
           Break
         EndIf
         WriteStringN(0, text.s)
-        zeilennummer.l = zeilennummer.l + 1
-      Wend
+        zeilennummer.l + 1
+      Next i.l
     EndIf
     CloseFile(0)
   EndIf
 EndProcedure
 
+Procedure SaveAsFile(EventType)
+  datei.s = SaveFileRequester("Bitte Datei zum Speichern auswählen", "", "", 0)
+  SafeFile(0)
+EndProcedure
+
+Procedure NeueTabelle(EventType)
+  ClearGadgetItems(#ListView)
+  AddGadgetItem(#ListView, -1, ":"+Chr(10)+
+                               "00"+Chr(10)+
+                               "0000"+Chr(10)+
+                               "01"+Chr(10)+
+                               ""+Chr(10)+
+                               "FF")
+  SpaltenFaerben()
+EndProcedure
+
+Procedure ZeileLoeschen(Event)
+  RemoveGadgetItem(#ListView, GetGadgetState(#ListView))
+EndProcedure
+
+Procedure ZeileEinfuegen(Event)
+  AddGadgetItem(#ListView, GetGadgetState(#ListView)+1,  "1 :"+Chr(10)+
+                                                         "00"+Chr(10)+
+                                                         "0000"+Chr(10)+
+                                                         "01"+Chr(10)+
+                                                         ""+Chr(10)+
+                                                         "FF")
+  SpaltenFaerben()
+EndProcedure
+
+Procedure.i GetSelectedColumn(WindowID.i, ListIconID.i)
+  Protected SelectedColumn.i
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Linux ; ------------------------------------------------
+      Protected ColumnList.i
+      Protected ColumnObject.i
+      Protected Iter.i
+      Protected Path.i
+      Protected TreeStore.i
+      If gtk_tree_view_get_cursor_(GadgetID(ListIconID), @Path.i, @ColumnObject.i)
+        TreeStore.i = gtk_tree_view_get_model_(GadgetID(ListIconID))
+        If gtk_tree_model_get_iter_(TreeStore.i, @Iter.i, Path.i)
+          If Path.i <> 0 And ColumnObject.i <> 0
+            ColumnList.i = gtk_tree_view_get_columns_(GadgetID(ListIconID))
+            SelectedColumn.i = g_list_index_(ColumnList.i, ColumnObject.i)
+            g_list_free_(ColumnList.i)
+          EndIf
+        EndIf
+      EndIf
+    CompilerCase #PB_OS_MacOS ; ------------------------------------------------
+      Protected CursorLocation.NSPoint
+      CursorLocation\x = WindowMouseX(WindowID)
+      CursorLocation\y = WindowHeight(WindowID) - WindowMouseY(WindowID)
+      CocoaMessage(@CursorLocation, GadgetID(ListIconID),
+        "convertPoint:@", @CursorLocation, "fromView:", 0)
+      SelectedColumn.i = CocoaMessage(0, GadgetID(ListIconID),
+        "columnAtPoint:@", @CursorLocation)
+    CompilerCase #PB_OS_Windows ; ----------------------------------------------
+      Protected CursorLocation.POINT
+      Protected HitInfo.LVHITTESTINFO
+      GetCursorPos_(CursorLocation)
+      MapWindowPoints_(0, GadgetID(ListIconID), CursorLocation, 1)             
+      Hitinfo\pt\x = CursorLocation\x
+      HitInfo\pt\y = CursorLocation\y
+      SendMessage_(GadgetID(ListIconID), #LVM_SUBITEMHITTEST, 0, HitInfo)
+      SelectedColumn.i = HitInfo\iSubItem                       
+  CompilerEndSelect
+  ProcedureReturn SelectedColumn.i
+EndProcedure
 
 Procedure.s To_Hexadezimal(inp.s)
   out.s = ""
@@ -109,7 +248,8 @@ EndProcedure
 
 Procedure.b IsHexDigit(Char.s)
   ; Korrektur: Bool() hinzugefügt
-  ProcedureReturn Bool((Char >= "0" And Char <= "9") Or (UCase(Char) >= "A" And UCase(Char) <= "F"))
+  ProcedureReturn Bool((Char >= "0" And Char <= "9") Or (UCase(Char) >= "A" And
+                                                         UCase(Char) <= "F"))
 EndProcedure
 
 Procedure.s CalculateIntelHexChecksum(HexLine.s)
@@ -161,7 +301,8 @@ Procedure.s ConvertHexToEscapedAscii(HexString.s)
   Protected ByteValue.b
 
   If Mod(Len(HexString), 2) <> 0
-    MessageRequester("Fehler", "Ungültige Hex-Sequenz: Ungerade Anzahl von Zeichen. '" + HexString + "'")
+    MessageRequester("Fehler", "Ungültige Hex-Sequenz: Ungerade Anzahl von Zeichen. '" +
+                               HexString + "'")
     ProcedureReturn "" ; Leerer String bei Fehler
   EndIf
   
@@ -254,13 +395,16 @@ Procedure.s ConvertEscapedAsciiToRawHex(EscapedAsciiString.s)
 EndProcedure
 
 Procedure Pruefsumme_Berechnen(spalte.l, zeile.l)
-  text.s = Zeile_Auslesen(zeile.l)
+  text.s = ":" +
+           GetGadgetItemText(#ListView, zeile.l, #Spalte_RECLEN) +
+           GetGadgetItemText(#ListView, zeile.l, #Spalte_LOAD_OFFSET) +
+           GetGadgetItemText(#ListView, zeile.l, #Spalte_RECTYP) +
+           GetGadgetItemText(#ListView, zeile.l, #Spalte_DATA) +
+           GetGadgetItemText(#ListView, zeile.l, #Spalte_CHKSUM)
   text.s = CalculateIntelHexChecksum(text.s)
-  If (Not text.s = "") And (spalte.l = 5)
-    *Ascii = Ascii(text.s)
-    CallFunction(ListViewLibraryHandle.l, "SetItemText", ListViewHandle.l, *Ascii, 5, zeile.l)
+  If (Not text.s = "") And (spalte.l = #Spalte_CHKSUM)
+    SetGadgetItemText(#ListView, zeile.l, text.s, #Spalte_CHKSUM)
   EndIf
-  FreeMemory(*Ascii)
 EndProcedure
 
 Procedure PruefeTypGeaendert(zeile.l, Typ.s)
@@ -268,19 +412,20 @@ Procedure PruefeTypGeaendert(zeile.l, Typ.s)
   ;wenn Typ=0,2...5 => Datensatzlänge = Datenfeld
   ;wenn Typ=1       => Datensatzlänge=0 und Adresse="0000"
   If typ.s = "01"
-    If (ZelleAuslesen(#Spalte_RECLEN, zeile.l) <> "00") Or
-       (ZelleAuslesen(#Spalte_DATA, zeile.l) <> "")
+    If (GetGadgetItemText(#ListView, zeile.l, #Spalte_RECLEN) <> "00") Or
+       (GetGadgetItemText(#ListView, zeile.l, #Spalte_DATA) <> "")
       If MessageRequester("Achtung",
                           "Datensatzlänge ist nicht Null, automatisch anpassen?",
                           #PB_MessageRequester_YesNo |
                           #PB_MessageRequester_Warning) = #PB_MessageRequester_Yes
-        ZelleSchreiben(#Spalte_RECLEN, zeile.l, "00")
-        ZelleSchreiben(#Spalte_DATA, zeile.l, "")
+        SetGadgetItemText(#ListView, zeile.l, "00", #Spalte_RECLEN)
+        SetGadgetItemText(#ListView, zeile.l, "0000", #Spalte_LOAD_OFFSET)
+        SetGadgetItemText(#ListView, zeile.l, "", #Spalte_DATA)
       EndIf 
     EndIf
   Else ;Typ=0,2...5
-    If (ZelleAuslesen(#Spalte_RECLEN, zeile.l) = "00") Or
-       (ZelleAuslesen(#Spalte_DATA, zeile.l) = "")
+    If (GetGadgetItemText(#ListView, zeile.l, #Spalte_RECLEN) = "00") Or
+       (GetGadgetItemText(#ListView, zeile.l, #Spalte_DATA) = "")
       MessageRequester("Achtung",
                        "Datensatzlänge ist Null!" + Chr(13) + Chr(10) +
                        "Bitte RECLEN und DATA auf richtige Länge überprüfen!",
@@ -291,10 +436,12 @@ EndProcedure
 
 Procedure.s DatenfeldPruefen(zeile.l, TestString.s)
   TestString.s = UCase(TestString.s)
-  DatenLaenge.l = Val("$"+ZelleAuslesen(#Spalte_RECLEN, zeile.l))*2 ;1Byte=2Zeichen
+  DatenLaenge.l = Val("$"+GetGadgetItemText(#ListView, zeile.l, #Spalte_RECLEN))*2 ;1Byte=2Zeichen
+  
   If Len(TestString.s) <> (DatenLaenge.l)
     MessageRequester("Achtung",
-                     "Datensatzlänge entspricht nicht der erwarteten Länge!" + Chr(13) + Chr(10) +
+                     "Datensatzlänge entspricht nicht der erwarteten Länge!" + Chr(13) +
+                     Chr(10) +
                      "Bitte DATA auf richtige Länge überprüfen!" + Chr(13) + Chr(10) +
                      "Erwartete Länge: " + Str(DatenLaenge.l) + Chr(13) + Chr(10) +
                      "Effektive Länge: " + Str(Len(TestString.s)),
@@ -310,7 +457,8 @@ Procedure.s DatenfeldPruefen(zeile.l, TestString.s)
   Next
   If Fehler.l
     MessageRequester("Achtung",
-                     "Datensatz enthält " + Str(Fehler.l) + " ungültige(s) Zeichen!" + Chr(13) + Chr(10) +
+                     "Datensatz enthält " + Str(Fehler.l) + " ungültige(s) Zeichen!" +
+                     Chr(13) + Chr(10) +
                      "Gültige Zeichen sind: 0...9 und A...F" + Chr(13) + Chr(10) +
                      "Kleinbuchstaben werden automatisch in Grossbuchstaben umgewandelt!",
                      #PB_MessageRequester_Ok | #PB_MessageRequester_Warning)
@@ -322,7 +470,8 @@ EndProcedure
 Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
   #InputRequesterSWID = 99
   If OpenWindow(#InputRequesterSWID, pos_x.u - 30 , pos_y.u + 10 , 360, 290,
-                "", #PB_Window_Tool | #PB_Window_SystemMenu | #PB_Window_SizeGadget | #PB_Window_TitleBar)
+                "", #PB_Window_Tool | #PB_Window_SystemMenu |
+                    #PB_Window_SizeGadget | #PB_Window_TitleBar)
     StickyWindow(#InputRequesterSWID, #True)
     DisableWindow(Window_0, #True)
     AddKeyboardShortcut(#InputRequesterSWID, #PB_Shortcut_Return, 10)
@@ -352,6 +501,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
           ;CheckBoxen verstecken:
           HideGadget(980 + x.a, 1)
         Next x.a
+        SetGadgetColor(976, #PB_Gadget_BackColor, #IntelHex_RECORD_MARK)
         SetGadgetText(989, "Zeilennummer (" + RTrim(RTrim(wert.s, ":")) +
                            ~") und Startcode (:)\r\n" +
                            ~"Intel-Bezeichnung: RECORD MARK\r\n" +
@@ -362,6 +512,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
           ;CheckBoxen verstecken:
           HideGadget(980 + x.a, 1)
         Next x.a
+        SetGadgetColor(976, #PB_Gadget_BackColor, #IntelHex_RECLEN)
         SetGadgetText(989, ~"Intel-Bezeichnung: RECLEN\r\n" +
                            ~"Byte count\r\n" + 
                            ~"Länge der Nutzdaten als zwei Hexadezimalziffern\r\n" +
@@ -374,6 +525,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
           ;CheckBoxen verstecken:
           HideGadget(980 + x.a, 1)
         Next x.a
+        SetGadgetColor(976, #PB_Gadget_BackColor, #IntelHex_LOAD_OFFSET)
         SetGadgetText(989, ~"Intel-Bezeichnung: LOAD OFFSET\r\n" +
                            ~"16-Bit-Adresse (Big-Endian)\r\n"+
                            "0x" + wert.s + " HEX")
@@ -412,7 +564,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
           ;CheckBoxen verstecken:
           HideGadget(980 + x.a, 1)
         Next x.a
-        SetGadgetColor(976, #PB_Gadget_BackColor, $ffffcc)
+        SetGadgetColor(976, #PB_Gadget_BackColor, #IntelHex_DATA)
         SetGadgetText(989, ~"Intel-Bezeichnung: INFO or DATA\r\n" +
                            "Nutzdaten (RECLEN x 2 Zeichen)")
         SetGadgetText(976, wert.s)
@@ -422,7 +574,7 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
           ;CheckBoxen verstecken:
           HideGadget(980 + x.a, 1)
         Next x.a
-        SetGadgetColor(976, #PB_Gadget_BackColor, $9999ff)
+        SetGadgetColor(976, #PB_Gadget_BackColor, #IntelHex_CHKSUM)
         SetGadgetText(989, ~"Intel-Bezeichnung: CHKSUM\r\n" +
                            ~"Prüfsumme über den Datensatz\r\n" +
                            ~"(ohne Satzbeginn)\r\n" +
@@ -515,30 +667,15 @@ Procedure.s InputRequesterS(spalte.l, zeile.l, wert.s, pos_x.u , pos_y.u)
   ProcedureReturn lResult.s
 EndProcedure
 
-Procedure Listview_Rechtsklick()
-  *bereich = AllocateMemory(320)
-  Rueckgabewert.l = CallFunction(ListViewLibraryHandle.l, "GetControlParas", *bereich)
-  If Rueckgabewert.l = 2 ;Rechtsklick!
-    ;0  = Handle des Listview Controls, in dem der Klick stattfand 
-    If PeekL(*bereich+0) = ListViewHandle.l ;und es ist das Richtige!
-      ;4  = Index der Spalte (nullbasierend), in der der Klick stattfand
-      spalte.l = PeekL(*bereich+4)
-      ;8  = Index der Zeile (nullbasierend), in der der Klick stattfand 
-      zeile.l = PeekL(*bereich+8)
-      ;64 = String (kein Zeiger!) mit dem Itemtext (maximal 256 Bytes, abschliessend mit Nullbyte)
-      item_text.s = PeekS(*bereich+64, -1, #PB_Ascii)
-      ;nur wenn etwas geändert neu schreiben:
-      item_text.s = InputRequesterS(spalte.l, zeile.l, item_text.s, DesktopMouseX(), DesktopMouseY())
-      If Not item_text.s = ""
-        ;schreibt den neuen Wert in die Zelle in entsprechende Zelle:
-        *bereich = Ascii(item_text.s)
-        CallFunction(ListViewLibraryHandle.l, "SetItemText", ListViewHandle.l, *bereich, spalte.l, zeile.l)
-      EndIf
-    EndIf
+Procedure Listview_Rechtsklick(klick_art)
+  zeile.l = GetGadgetState(#ListView) ;Zeile
+  spalte.l = GetSelectedColumn(Window_0, #ListView) ;Spalte
+  text.s = GetGadgetItemText(#ListView, zeile.l, spalte.l)
+  text.s = InputRequesterS(spalte.l, zeile.l, text.s, DesktopMouseX(), DesktopMouseY())
+  If Not text.s = ""
+    SetGadgetItemText(#ListView, zeile.l, text.s, spalte.l)
   EndIf
-  FreeMemory(*bereich)
 EndProcedure
-
 
 ; Findet einen Zielstring im Quellstring, ignoriert dabei die Sequenz "\x" im Quellstring.
 ; Gibt die Startposition des Zielstrings zurück (1-basiert), oder 0, wenn nicht gefunden.
@@ -553,24 +690,21 @@ Procedure.i FindStringIgnoringBackslashX(SourceString.s, SearchString.s, StartPo
   Protected CurrentSourcePos = StartPosition
   Protected TempSourceChar.s
   Protected MatchFound = #False
-
   ; Grundlegende Prüfungen
   If SearchLen = 0 : ProcedureReturn StartPosition : EndIf ; Leerer Suchstring ist immer gefunden
   If SourceLen = 0 : ProcedureReturn 0 : EndIf ; Leerer Quellstring kann nichts enthalten
   If StartPosition < 1 : StartPosition = 1 : EndIf ; Startposition muss mindestens 1 sein
   If StartPosition > SourceLen : ProcedureReturn 0 : EndIf ; Startposition außerhalb des Strings
-
   ; Hauptsuchschleife
   While CurrentSourcePos <= SourceLen
     TempSourceChar = Mid(SourceString, CurrentSourcePos, 1)
-
     ; Prüfen, ob wir bei "\x" sind
-    If TempSourceChar = "\" And CurrentSourcePos + 1 <= SourceLen And Mid(SourceString, CurrentSourcePos + 1, 1) = "x"
+    If TempSourceChar = "\" And CurrentSourcePos + 1 <= SourceLen And
+       Mid(SourceString, CurrentSourcePos + 1, 1) = "x"
       ; "\x" gefunden, überspringe diese beiden Zeichen
       CurrentSourcePos + 2
       Continue ; Springe zum nächsten Schleifendurchlauf
     EndIf
-
     ; Wenn nicht "\x", versuche eine Übereinstimmung
     If CurrentSourcePos + SearchLen - 1 <= SourceLen
       ; Erstelle einen temporären Substring aus SourceString (ohne "\x")
@@ -579,31 +713,26 @@ Procedure.i FindStringIgnoringBackslashX(SourceString.s, SearchString.s, StartPo
       Protected SearchIndex = 1
       Protected SourcePtr = CurrentSourcePos
       Protected MatchPossible = #True
-
       While SearchIndex <= SearchLen And SourcePtr <= SourceLen
         TempSourceChar = Mid(SourceString, SourcePtr, 1)
-        If TempSourceChar = "\" And SourcePtr + 1 <= SourceLen And Mid(SourceString, SourcePtr + 1, 1) = "x"
+        If TempSourceChar = "\" And SourcePtr + 1 <= SourceLen And
+           Mid(SourceString, SourcePtr + 1, 1) = "x"
           SourcePtr + 2 ; Überspringe "\x"
           Continue
         EndIf
-
         If Mid(SourceString, SourcePtr, 1) <> Mid(SearchString, SearchIndex, 1)
           MatchPossible = #False
           Break
         EndIf
-
         SourcePtr + 1
         SearchIndex + 1
       Wend
-
       If MatchPossible And SearchIndex > SearchLen
         ProcedureReturn CurrentSourcePos ; Übereinstimmung gefunden
       EndIf
     EndIf
-
     CurrentSourcePos + 1
   Wend
-
   ProcedureReturn 0 ; Nichts gefunden
 EndProcedure
 
@@ -611,34 +740,49 @@ Procedure WeiterSuchen(EventType)
   Protected zelle.s
   If textsuchen.s
     Repeat
-      zelle.s = ZelleAuslesen(4, zeilensuchen.l)
+      zelle.s = GetGadgetItemText(#ListView, zeilensuchen.l, #Spalte_DATA)
       zelle.s = ConvertHexToEscapedAscii(zelle.s)
       zeilensuchen.l + 1
-    Until FindStringIgnoringBackslashX(zelle.s, textsuchen.s) Or (zeilensuchen.l > AnzahlZeilen())
-    If zeilensuchen.l > AnzahlZeilen()
+    Until FindStringIgnoringBackslashX(zelle.s, textsuchen.s) Or
+          (zeilensuchen.l > CountGadgetItems(#ListView))
+    If zeilensuchen.l > CountGadgetItems(#ListView)
       MessageRequester("Warnung", "String nicht gefunden!")
     Else
       MessageRequester("Gefunden", "String gefunden in Zeile " + Str(zeilensuchen.l))
-      ZeileSelektieren(zeilensuchen.l-1)
+      SetGadgetState(#ListView, zeilensuchen.l-1) ; Zeile ins Blickfeld holen
+      ;funktioniert noch nicht:
+      SetGadgetItemState(#ListView, zeilensuchen.l-1, #PB_ListIcon_Selected) ;Zeile selektieren
     EndIf
   EndIf
 EndProcedure
 
 Procedure Suchen(EventType)
-  textsuchen.s = InputRequester("Textsuche", "Zu suchende Phrase eingeben:", "", 0, Window_0)
+  textsuchen.s = InputRequester("Textsuche", "Zu suchende Phrase eingeben:",
+                                "", 0, Window_0)
   If textsuchen.s
     zeilensuchen.l = 0
     WeiterSuchen(0)
   EndIf
 EndProcedure
 
+Procedure Hilfe(Event)
+  RunProgram("https://github.com/Chregu73/HEXadezimaler/blob/main/README.md")
+EndProcedure
+
+Procedure Ueber(Event)
+  MessageRequester("Über",
+                   "HEXadezimaler" + Chr(13) + Chr(10) +
+                   "Einfaches Programm zum Editieren von Intel-HEX-Dateien",
+                   #PB_MessageRequester_Ok | #PB_MessageRequester_Info)
+EndProcedure
+
 Procedure Beenden(EventType)
   Event = #PB_Event_CloseWindow
 EndProcedure
 
-; IDE Options = PureBasic 6.20 (Windows - x86)
-; CursorPosition = 483
-; FirstLine = 456
-; Folding = ----
+; IDE Options = PureBasic 6.20 (Windows - x64)
+; CursorPosition = 768
+; FirstLine = 728
+; Folding = -----
 ; EnableXP
 ; DPIAware
