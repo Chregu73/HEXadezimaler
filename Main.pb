@@ -1,6 +1,8 @@
 ﻿Global zeilennummer.l, zeilensuchen.l, textsuchen.s, datei.s, Event
 
 #WM_RBUTTONDOWN = 516
+#Version$       = "1.01"
+#Datum$         = "9. Juni 2025"
 
 XIncludeFile "MainWindow.pbi"
 XIncludeFile "MainFunktionen.pbi"
@@ -20,7 +22,7 @@ Zeichne_Listview(WindowWidth(Window_0)-10,
                  ReadPreferenceInteger("Spalte 4", 376),
                  ReadPreferenceInteger("Spalte 5", 32))
 ClosePreferences()
-
+NeueTabelle(0)
 
 Repeat
   Event = WaitWindowEvent()
@@ -34,13 +36,14 @@ Repeat
       If EventGadget() = #ListView And EventType() = #PB_EventType_LeftDoubleClick
         Listview_Rechtsklick(#PB_EventType_LeftDoubleClick) ;im ListView
       EndIf
+      
   EndSelect
 Until Event = #PB_Event_CloseWindow ;Beenden, wenn eines der Fenster geschlossen wird.
 Speichere_Preferences()
 End
 
-; IDE Options = PureBasic 6.20 (Windows - x86)
-; CursorPosition = 34
+; IDE Options = PureBasic 6.20 (Windows - x64)
+; CursorPosition = 38
 ; EnableXP
 ; DPIAware
 ; UseIcon = Hex2.ico

@@ -23,8 +23,12 @@
 #Spalte_DATA                      = 4
 #Spalte_CHKSUM                    = 5
 
+#LF$                              = Chr(#LF)
+;#CRLF$                             intern schon definiert!
+#IntelHex_Leere_Zeile$            = ":"+#LF$+"00"+#LF$+"0000"+#LF$+"01"+#LF$+""+#LF$+"FF"
+
 Procedure SpaltenFaerben()
-  For i.l = 0 To CountGadgetItems(#ListView)
+  For i.l = 0 To CountGadgetItems(#ListView)-1
     SetGadgetItemColor(#ListView, i.l, #PB_Gadget_BackColor,
                        #IntelHex_RECORD_MARK, #Spalte_RECORD_MARK)
     SetGadgetItemColor(#ListView, i.l, #PB_Gadget_BackColor,
@@ -103,83 +107,102 @@ EndProcedure
 Procedure LoadFile(EventType)
   zeile.s
   datei.s = OpenFileRequester("Bitte Datei zum Laden auswählen", "", "", 0)
-  ;datei.s = "Beispiel.hex"
+  Dim text.s(5)
   If datei.s
     zeilennummer.l = 0
     ClearGadgetItems(#ListView)
     If ReadFile(0, datei.s)
+      OpenWindow(100, 0, 0, 200, 70, "Lade Datei...",
+                 #PB_Window_WindowCentered | #PB_Window_Tool, WindowID(Window_0))
+      TextGadget(101, 20, 10, 160, 20, "Lade Zeile:")
+      TextGadget(102, 20, 30, 160, 20, "0", #PB_Text_Right | #PB_Text_Border)
       While Eof(0) = 0
         zeile.s = ReadString(0, #PB_Ascii)
-        sc.s = Mid(zeile.s, 1, 1)
-        bc.s = Mid(zeile.s, 2, 2)
-        ad.s = Mid(zeile.s, 4, 4)
-        tp.s = Mid(zeile.s, 8, 2)
-        df.s = Mid(zeile.s, 10) ;bis zum Zeilenende lesen
-        ps.s = Right(df.s, 2);hintersten 2 Zeichen
-        df.s = Mid(df.s, 1, StringByteLength(df.s, #PB_Ascii)-2)
+        text.s(#Spalte_RECORD_MARK) = Mid(zeile.s, 1, 1)
+        text.s(#Spalte_RECLEN)      = Mid(zeile.s, 2, 2)
+        text.s(#Spalte_LOAD_OFFSET) = Mid(zeile.s, 4, 4)
+        text.s(#Spalte_RECTYP)      = Mid(zeile.s, 8, 2)
+        text.s(#Spalte_DATA)        = Mid(zeile.s, 10) ;bis zum Zeilenende lesen
+        text.s(#Spalte_CHKSUM)      = Right(text.s(#Spalte_DATA), 2) ;hintersten 2 Zeichen
+        text.s(#Spalte_DATA)        = Mid(text.s(#Spalte_DATA), 1,
+                                          StringByteLength(text.s(#Spalte_DATA), #PB_Ascii)-2)
         zeilennummer.l + 1
-        AddGadgetItem(#ListView, -1, Str(zeilennummer.l) + " " + sc.s+Chr(10)+
-                                     bc.s+Chr(10)+
-                                     ad.s+Chr(10)+
-                                     tp.s+Chr(10)+
-                                     df.s+Chr(10)+
-                                     ps.s)
-        SpaltenFaerben()
+        SetGadgetText(102, Str(zeilennummer.l))
+        AddGadgetItem(#ListView, -1, Str(zeilennummer.l) + " " +
+                                     text.s(#Spalte_RECORD_MARK) + #LF$ +
+                                     text.s(#Spalte_RECLEN)      + #LF$ +
+                                     text.s(#Spalte_LOAD_OFFSET) + #LF$ +
+                                     text.s(#Spalte_RECTYP)      + #LF$ +
+                                     text.s(#Spalte_DATA)        + #LF$ +
+                                     text.s(#Spalte_CHKSUM))
       Wend
       CloseFile(0)
-    EndIf
+      SetGadgetText(101, "Färbe Spalten...")
+      SpaltenFaerben()
+      CloseWindow(100)
+   EndIf
   EndIf
+  FreeArray(text.s())
 EndProcedure
 
 Procedure SafeFile(EventType)
   If datei.s
     zeilennummer.l = 0
     If CreateFile(0, datei.s)
-      For i.l = 0 To CountGadgetItems(#ListView)
+      OpenWindow(100, 0, 0, 200, 70, "Speichere Datei...",
+                 #PB_Window_WindowCentered | #PB_Window_Tool, WindowID(Window_0))
+      TextGadget(101, 20, 10, 160, 20, "Schreibe Zeile:")
+      TextGadget(102, 20, 30, 160, 20, "0", #PB_Text_Right | #PB_Text_Border)
+      For i.l = 0 To CountGadgetItems(#ListView)-1
         text.s = ":" +
            GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_RECLEN) +
            GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_LOAD_OFFSET) +
            GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_RECTYP) +
            GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_DATA) +
            GetGadgetItemText(#ListView, zeilennummer.l, #Spalte_CHKSUM)
-        If text.s = ""
+        If text.s = ":"
           Break
         EndIf
         WriteStringN(0, text.s)
         zeilennummer.l + 1
+        SetGadgetText(102, Str(zeilennummer.l) + " / " + CountGadgetItems(#ListView))
       Next i.l
     EndIf
     CloseFile(0)
+    CloseWindow(100)
+  Else
+    SaveAsFile(0)
   EndIf
 EndProcedure
 
 Procedure SaveAsFile(EventType)
   datei.s = SaveFileRequester("Bitte Datei zum Speichern auswählen", "", "", 0)
-  SafeFile(0)
+  If datei.s
+    SafeFile(0)
+  EndIf
 EndProcedure
 
 Procedure NeueTabelle(EventType)
+  datei.s = ""
   ClearGadgetItems(#ListView)
-  AddGadgetItem(#ListView, -1, ":"+Chr(10)+
-                               "00"+Chr(10)+
-                               "0000"+Chr(10)+
-                               "01"+Chr(10)+
-                               ""+Chr(10)+
-                               "FF")
+  AddGadgetItem(#ListView, -1, "1 "+#IntelHex_Leere_Zeile$)
   SpaltenFaerben()
+EndProcedure
+
+Procedure NeuDurchnummerieren(Event)
+  For zeile.l = 0 To CountGadgetItems(#ListView)-1
+    SetGadgetItemText(#ListView, zeile.l, Str(zeile.l+1)+" :", #Spalte_RECORD_MARK)
+  Next zeile.l
 EndProcedure
 
 Procedure ZeileLoeschen(Event)
   RemoveGadgetItem(#ListView, GetGadgetState(#ListView))
+  NeuDurchnummerieren(0)
 EndProcedure
 
 Procedure ZeileEinfuegen(Event)
-  AddGadgetItem(#ListView, GetGadgetState(#ListView)+1,  "1 :"+Chr(10)+
-                                                         "00"+Chr(10)+
-                                                         "0000"+Chr(10)+
-                                                         "01"+Chr(10)+
-                                                         ""+Chr(10)+
-                                                         "FF")
+  AddGadgetItem(#ListView, GetGadgetState(#ListView)+1,  "1 "+#IntelHex_Leere_Zeile$)
+  NeuDurchnummerieren(0)
   SpaltenFaerben()
 EndProcedure
 
@@ -427,7 +450,7 @@ Procedure PruefeTypGeaendert(zeile.l, Typ.s)
     If (GetGadgetItemText(#ListView, zeile.l, #Spalte_RECLEN) = "00") Or
        (GetGadgetItemText(#ListView, zeile.l, #Spalte_DATA) = "")
       MessageRequester("Achtung",
-                       "Datensatzlänge ist Null!" + Chr(13) + Chr(10) +
+                       "Datensatzlänge ist Null!" + #CRLF$ +
                        "Bitte RECLEN und DATA auf richtige Länge überprüfen!",
                        #PB_MessageRequester_Ok | #PB_MessageRequester_Warning)
     EndIf
@@ -440,10 +463,9 @@ Procedure.s DatenfeldPruefen(zeile.l, TestString.s)
   
   If Len(TestString.s) <> (DatenLaenge.l)
     MessageRequester("Achtung",
-                     "Datensatzlänge entspricht nicht der erwarteten Länge!" + Chr(13) +
-                     Chr(10) +
-                     "Bitte DATA auf richtige Länge überprüfen!" + Chr(13) + Chr(10) +
-                     "Erwartete Länge: " + Str(DatenLaenge.l) + Chr(13) + Chr(10) +
+                     "Datensatzlänge entspricht nicht der erwarteten Länge!" + #CRLF$ +
+                     "Bitte DATA auf richtige Länge überprüfen!" + #CRLF$ +
+                     "Erwartete Länge: " + Str(DatenLaenge.l) + #CRLF$ +
                      "Effektive Länge: " + Str(Len(TestString.s)),
                      #PB_MessageRequester_Ok | #PB_MessageRequester_Warning)
     ;TestString.s = "" ;Leerer String zurück zum nichts ändern
@@ -457,9 +479,9 @@ Procedure.s DatenfeldPruefen(zeile.l, TestString.s)
   Next
   If Fehler.l
     MessageRequester("Achtung",
-                     "Datensatz enthält " + Str(Fehler.l) + " ungültige(s) Zeichen!" +
-                     Chr(13) + Chr(10) +
-                     "Gültige Zeichen sind: 0...9 und A...F" + Chr(13) + Chr(10) +
+                     "Datensatz enthält " + Str(Fehler.l) +
+                     " ungültige(s) Zeichen!" + #CRLF$ +
+                     "Gültige Zeichen sind: 0...9 und A...F" + #CRLF$ +
                      "Kleinbuchstaben werden automatisch in Grossbuchstaben umgewandelt!",
                      #PB_MessageRequester_Ok | #PB_MessageRequester_Warning)
     ;TestString.s = "" ;Leerer String zurück zum nichts ändern
@@ -771,8 +793,10 @@ EndProcedure
 
 Procedure Ueber(Event)
   MessageRequester("Über",
-                   "HEXadezimaler" + Chr(13) + Chr(10) +
-                   "Einfaches Programm zum Editieren von Intel-HEX-Dateien",
+                   "HEXadezimaler Version " + #Version$ + #CRLF$ +
+                   "Einfaches Programm zum Editieren von Intel-HEX-Dateien" + #CRLF$ +
+                   #Datum$ + " von Chregu Müller" + #CRLF$ +
+                   "eMail: chregu@vtxmail.ch",
                    #PB_MessageRequester_Ok | #PB_MessageRequester_Info)
 EndProcedure
 
@@ -781,8 +805,8 @@ Procedure Beenden(EventType)
 EndProcedure
 
 ; IDE Options = PureBasic 6.20 (Windows - x64)
-; CursorPosition = 768
-; FirstLine = 728
+; CursorPosition = 193
+; FirstLine = 176
 ; Folding = -----
 ; EnableXP
 ; DPIAware
