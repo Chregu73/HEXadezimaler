@@ -2,7 +2,7 @@
 
 ![](HEXadezimaler_W10.png)
 
-Neue verbesserte Version, erstellt mit [PureBasic](https://www.purebasic.com/)\
+Version 1.01, erstellt am 9. Juni 2025 mit [PureBasic](https://www.purebasic.com/)\
 Compiliert für Windows x86 und x64. Kann auch für Linux und OS X kompiliert werden!
 
 ## Anleitung
@@ -43,4 +43,4 @@ Im Menu "Bearbeiten/Suchen..." kann nach Text gesucht werden. Dazu wird intern i
 
 ### Speichern
 
-Bei "Speichern unter..." bitte Dateiendung angeben! "Speichern" überschreibt die Datei ohne Warnung!
+Bei "Speichern unter..." bitte Dateiendung angeben! "Speichern" überschreibt die Datei ohne Warnung! Die Datei wird immer mit CR/LF am Zeilenende gespeichert!
